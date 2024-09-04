@@ -27,21 +27,21 @@ func NewUserService(db *sqlx.DB) *UserService {
 	return &UserService{db: db}
 }
 
-func (s *UserService) Signup(user dto.UserPayload) (*dto.LoginResponse, error) {
+func (s *UserService) Signup(user dto.SignupPayload) (string, error) {
 	userId, err := s.CreateUser(user)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	token, err := generateToken(userId)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &dto.LoginResponse{Token: token}, nil
+	return token, nil
 }
 
-func (s *UserService) CreateUser(user dto.UserPayload) (int, error) {
+func (s *UserService) CreateUser(user dto.SignupPayload) (int, error) {
 	query := `
 		INSERT INTO users (username, password, email, first_name, last_name, phone_number)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -74,27 +74,27 @@ func (s *UserService) CreateUser(user dto.UserPayload) (int, error) {
 	return userId, nil
 }
 
-func (s *UserService) Login(login dto.LoginPayload) (*dto.LoginResponse, error) {
+func (s *UserService) Login(login dto.LoginPayload) (string, error) {
 	query := `SELECT user_id, password FROM users WHERE email = $1`
 
 	var user entity.User
 	err := s.db.QueryRowx(query, login.Email).Scan(&user.UserID, &user.Password)
 	if err == sql.ErrNoRows {
-		return nil, ErrUserNotFound
+		return "", ErrUserNotFound
 	} else if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	token, err := generateToken(user.UserID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &dto.LoginResponse{Token: token}, nil
+	return token, nil
 }
 
 func generateToken(userId int) (string, error) {

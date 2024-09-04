@@ -59,13 +59,13 @@ func TestSignup(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		user    dto.UserPayload
+		user    dto.SignupPayload
 		err     error
 		wantErr bool
 	}{
 		{
 			name: "valid user payload",
-			user: dto.UserPayload{
+			user: dto.SignupPayload{
 				Username:    "testuser",
 				Password:    "testpassword",
 				Email:       "testuser@example.com",
@@ -78,7 +78,7 @@ func TestSignup(t *testing.T) {
 		},
 		{
 			name: "non-unique username",
-			user: dto.UserPayload{
+			user: dto.SignupPayload{
 				Username:    "user",
 				Password:    "password",
 				Email:       "testuser@example.com",
@@ -123,13 +123,13 @@ func TestCreateUser(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		user     dto.UserPayload
+		user     dto.SignupPayload
 		expected int
 		err      error
 	}{
 		{
 			name: "create user with valid payload",
-			user: dto.UserPayload{
+			user: dto.SignupPayload{
 				Username:    "testuser",
 				Password:    "testpassword",
 				Email:       "testuser@example.com",
@@ -142,7 +142,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			name: "create user with password too long",
-			user: dto.UserPayload{
+			user: dto.SignupPayload{
 				Username:    "testuser",
 				Password:    strings.Repeat("a", 73),
 				Email:       "testuser@example.com",
@@ -154,7 +154,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			name: "create user with non-unique username",
-			user: dto.UserPayload{
+			user: dto.SignupPayload{
 				Username:    "user",
 				Password:    "password",
 				Email:       "user1@example",
@@ -240,15 +240,14 @@ func TestLogin(t *testing.T) {
 					AddRow(tt.mockUser.UserID, tt.mockUser.Password))
 			}
 
-			response, err := userService.Login(tt.login)
+			token, err := userService.Login(tt.login)
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.Nil(t, response)
+				assert.Empty(t, token)
 			} else {
 				assert.NoError(t, err)
-				assert.NotNil(t, response)
-				assert.NotEmpty(t, response.Token)
+				assert.NotEmpty(t, token)
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())

@@ -3,13 +3,12 @@ package dto
 import "github.com/go-playground/validator/v10"
 
 type SignupPayload struct {
-	Username    string         `json:"username" validate:"required"`
-	Password    string         `json:"password" validate:"required"`
-	Email       string         `json:"email" validate:"required,email"`
-	FirstName   string         `json:"first_name" validate:"required"`
-	LastName    string         `json:"last_name" validate:"required"`
-	PhoneNumber string         `json:"phone_number" validate:"required"`
-	Address     AddressPayload `json:"address" validate:"required"`
+	Username    string `json:"username" validate:"required"`
+	Password    string `json:"password" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	PhoneNumber string `json:"phone_number" validate:"required"`
 }
 
 func (s *SignupPayload) Validate() error {
@@ -30,13 +29,4 @@ func (l *LoginPayload) Validate() error {
 // used for login and signup response
 type LoginResponse struct {
 	Token string `json:"token"`
-}
-
-type UserPayload struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	Email       string `json:"email"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	PhoneNumber string `json:"phone_number"`
 }
