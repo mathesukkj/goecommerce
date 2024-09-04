@@ -313,6 +313,88 @@ func TestGetUserById(t *testing.T) {
 	}
 }
 
+func TestUpdateUser(t *testing.T) {
+	userService, mock := setupUserService(t)
+	seedUsers(t, userService)
+	query := `
+		UPDATE users
+		SET username = $1, email = $2, first_name = $3, last_name = $4, phone_number = $5
+		WHERE user_id = $6
+		RETURNING user_id, username, email, first_name, last_name, phone_number
+	`
+
+	tests := []struct {
+		name     string
+		userID   int
+		input    dto.UpdateUserPayload
+		wantUser *entity.User
+		wantErr  error
+	}{
+		{
+			name:   "successful update",
+			userID: 1,
+			input: dto.UpdateUserPayload{
+				Username:    "updateduser",
+				Email:       "updated@example.com",
+				FirstName:   "Updated",
+				LastName:    "User",
+				PhoneNumber: "9876543210",
+			},
+			wantUser: &entity.User{
+				UserID:      1,
+				Username:    "updateduser",
+				Email:       "updated@example.com",
+				FirstName:   "Updated",
+				LastName:    "User",
+				PhoneNumber: "9876543210",
+			},
+			wantErr: nil,
+		},
+		{
+			name:   "user not found",
+			userID: 999,
+			input: dto.UpdateUserPayload{
+				Username:    "nonexistent",
+				Email:       "nonexistent@example.com",
+				FirstName:   "Non",
+				LastName:    "Existent",
+				PhoneNumber: "1111111111",
+			},
+			wantUser: nil,
+			wantErr:  ErrUserNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantUser != nil {
+				rows := sqlmock.NewRows([]string{"user_id", "username", "email", "first_name", "last_name", "phone_number"}).
+					AddRow(tt.wantUser.UserID, tt.wantUser.Username, tt.wantUser.Email, tt.wantUser.FirstName, tt.wantUser.LastName, tt.wantUser.PhoneNumber)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).
+					WithArgs(tt.input.Username, tt.input.Email, tt.input.FirstName, tt.input.LastName, tt.input.PhoneNumber, tt.userID).
+					WillReturnRows(rows)
+			} else {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).
+					WithArgs(tt.input.Username, tt.input.Email, tt.input.FirstName, tt.input.LastName, tt.input.PhoneNumber, tt.userID).
+					WillReturnError(sql.ErrNoRows)
+			}
+
+			gotUser, err := userService.UpdateUser(tt.userID, tt.input)
+
+			if tt.wantErr != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.wantErr, err)
+				assert.Nil(t, gotUser)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantUser, gotUser)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
 func TestGenerateToken(t *testing.T) {
 	tests := []struct {
 		name     string

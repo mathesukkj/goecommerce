@@ -85,7 +85,7 @@ func (s *UserService) Login(login dto.LoginPayload) (string, error) {
 	query := `SELECT user_id, password FROM users WHERE email = $1`
 
 	var user entity.User
-	err := s.db.QueryRowx(query, login.Email).Scan(&user.UserID, &user.Password)
+	err := s.db.QueryRowx(query, login.Email).StructScan(&user)
 	if err == sql.ErrNoRows {
 		return "", ErrUserNotFound
 	} else if err != nil {
@@ -108,7 +108,7 @@ func (s *UserService) GetUserByID(userID int) (*entity.User, error) {
 	query := `SELECT user_id, username, email, first_name, last_name, phone_number FROM users WHERE user_id = $1`
 
 	var user entity.User
-	err := s.db.QueryRowx(query, userID).Scan(&user.UserID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.PhoneNumber)
+	err := s.db.QueryRowx(query, userID).StructScan(&user)
 	if err == sql.ErrNoRows {
 		return nil, ErrUserNotFound
 	} else if err != nil {
@@ -116,6 +116,33 @@ func (s *UserService) GetUserByID(userID int) (*entity.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (s *UserService) UpdateUser(userID int, user dto.UpdateUserPayload) (*entity.User, error) {
+	query := `
+		UPDATE users
+		SET username = $1, email = $2, first_name = $3, last_name = $4, phone_number = $5
+		WHERE user_id = $6
+		RETURNING user_id, username, email, first_name, last_name, phone_number
+	`
+
+	var updatedUser entity.User
+	err := s.db.QueryRowx(
+		query,
+		user.Username,
+		user.Email,
+		user.FirstName,
+		user.LastName,
+		user.PhoneNumber,
+		userID,
+	).StructScan(&updatedUser)
+	if err == sql.ErrNoRows {
+		return nil, ErrUserNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &updatedUser, nil
 }
 
 func generateToken(userId int) (string, error) {

@@ -16,6 +16,19 @@ func (s *SignupPayload) Validate() error {
 	return validate.Struct(s)
 }
 
+type UpdateUserPayload struct {
+	Username    string `json:"username" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	PhoneNumber string `json:"phone_number" validate:"required"`
+}
+
+func (u *UpdateUserPayload) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
 type LoginPayload struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
