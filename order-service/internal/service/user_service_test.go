@@ -395,6 +395,53 @@ func TestUpdateUser(t *testing.T) {
 	}
 }
 
+func TestDeleteUser(t *testing.T) {
+	userService, mock := setupUserService(t)
+	seedUsers(t, userService)
+	query := `DELETE FROM users WHERE user_id = $1`
+
+	tests := []struct {
+		name    string
+		userID  int
+		wantErr error
+	}{
+		{
+			name:    "successful deletion",
+			userID:  1,
+			wantErr: nil,
+		},
+		{
+			name:    "user not found",
+			userID:  999,
+			wantErr: ErrUserNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantErr == nil {
+				mock.ExpectExec(regexp.QuoteMeta(query)).
+					WithArgs(tt.userID).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			} else {
+				mock.ExpectExec(regexp.QuoteMeta(query)).
+					WithArgs(tt.userID).
+					WillReturnResult(sqlmock.NewResult(0, 0))
+			}
+
+			err := userService.DeleteUser(tt.userID)
+			if tt.wantErr != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.wantErr, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
 func TestGenerateToken(t *testing.T) {
 	tests := []struct {
 		name     string

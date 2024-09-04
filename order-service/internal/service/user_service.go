@@ -145,6 +145,26 @@ func (s *UserService) UpdateUser(userID int, user dto.UpdateUserPayload) (*entit
 	return &updatedUser, nil
 }
 
+func (s *UserService) DeleteUser(userID int) error {
+	query := `DELETE FROM users WHERE user_id = $1`
+
+	result, err := s.db.Exec(query, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
 func generateToken(userId int) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userId,
