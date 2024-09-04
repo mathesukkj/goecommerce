@@ -17,6 +17,7 @@ var (
 	ErrPasswordTooLong = errors.New("password too long")
 	ErrUserExists      = errors.New("user with this username or email already exists")
 	ErrUserNotFound    = errors.New("user not found")
+	ErrInvalidPassword = errors.New("invalid user or password")
 )
 
 type UserService struct {
@@ -86,7 +87,7 @@ func (s *UserService) Login(login dto.LoginPayload) (string, error) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
-		return "", err
+		return "", ErrInvalidPassword
 	}
 
 	token, err := generateToken(user.UserID)
