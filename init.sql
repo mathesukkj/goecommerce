@@ -1,5 +1,3 @@
--- ORDERS SERVICE
-
 -- Create Users table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -8,7 +6,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
-    phone_number VARCHAR(20)
+    phone_number VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -22,7 +20,7 @@ CREATE TABLE addresses (
     city VARCHAR(100) NOT NULL,
     state VARCHAR(50),
     postal_code VARCHAR(20) NOT NULL,
-    country VARCHAR(50) NOT NULL
+    country VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -35,11 +33,40 @@ CREATE TABLE payment_methods (
     payment_type VARCHAR(50) NOT NULL,
     card_number VARCHAR(16),
     expiration_date DATE,
-    card_holder_name VARCHAR(100)
+    card_holder_name VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_payment_method_user_id ON payment_methods (user_id);
+
+-- Create Categories table
+CREATE TABLE categories (
+    category_id SERIAL PRIMARY KEY,
+    category_name VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Create Products table
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
+    product_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock_quantity INTEGER NOT NULL
+);
+
+-- Create Reviews table
+CREATE TABLE reviews (
+    review_id SERIAL PRIMARY KEY,
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_review_product_id ON reviews (product_id);
+CREATE INDEX idx_review_user_id ON reviews (user_id);
 
 -- Create Shopping Carts table
 CREATE TABLE shopping_carts (
@@ -54,7 +81,7 @@ CREATE TABLE cart_items (
     cart_item_id SERIAL PRIMARY KEY,
     cart_id INTEGER REFERENCES shopping_carts(cart_id),
     product_id INTEGER REFERENCES products(product_id),
-    quantity INTEGER NOT NULL
+    quantity INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -91,35 +118,3 @@ CREATE TABLE order_items (
 );
 
 CREATE INDEX idx_order_item_order_id ON order_items (order_id);
-
-
--- PRODUCTS SERVICE
-
--- Create Categories table
-CREATE TABLE categories (
-    category_id SERIAL PRIMARY KEY,
-    category_name VARCHAR(100) UNIQUE NOT NULL
-);
-
--- Create Products table
-CREATE TABLE products (
-    product_id SERIAL PRIMARY KEY,
-    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
-    product_name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    stock_quantity INTEGER NOT NULL
-);
-
--- Create Reviews table
-CREATE TABLE reviews (
-    review_id SERIAL PRIMARY KEY,
-    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-    review_text TEXT,
-    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_review_product_id ON reviews (product_id);
-CREATE INDEX idx_review_user_id ON reviews (user_id);
