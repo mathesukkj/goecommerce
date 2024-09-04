@@ -1,0 +1,6 @@
+- 1. Create the db, tables, and columns
+- 2. Init the golang project
+- 3. Create the models
+- 4. Create the handlers
+- 5. Create the routes
+- 6. Create the database functions
