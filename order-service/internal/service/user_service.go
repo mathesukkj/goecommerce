@@ -104,6 +104,20 @@ func (s *UserService) Login(login dto.LoginPayload) (string, error) {
 	return token, nil
 }
 
+func (s *UserService) GetUserByID(userID int) (*entity.User, error) {
+	query := `SELECT user_id, username, email, first_name, last_name, phone_number FROM users WHERE user_id = $1`
+
+	var user entity.User
+	err := s.db.QueryRowx(query, userID).Scan(&user.UserID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.PhoneNumber)
+	if err == sql.ErrNoRows {
+		return nil, ErrUserNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func generateToken(userId int) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userId,

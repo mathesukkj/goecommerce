@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -248,6 +249,63 @@ func TestLogin(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, token)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestGetUserById(t *testing.T) {
+	userService, mock := setupUserService(t)
+	seedUsers(t, userService)
+	query := `SELECT user_id, username, email, first_name, last_name, phone_number FROM users WHERE user_id = $1`
+
+	tests := []struct {
+		name     string
+		userID   int
+		wantUser *entity.User
+		wantErr  error
+	}{
+		{
+			name:   "user found",
+			userID: 1,
+			wantUser: &entity.User{
+				UserID:      1,
+				Username:    "user",
+				Email:       "user@example.com",
+				FirstName:   "user",
+				LastName:    "User",
+				PhoneNumber: "1234567890",
+			},
+			wantErr: nil,
+		},
+		{
+			name:     "user not found",
+			userID:   999,
+			wantUser: nil,
+			wantErr:  ErrUserNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockQuery := mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.userID)
+
+			if tt.wantUser != nil {
+				mockQuery.WillReturnRows(sqlmock.NewRows([]string{"user_id", "username", "email", "first_name", "last_name", "phone_number"}).
+					AddRow(tt.wantUser.UserID, tt.wantUser.Username, tt.wantUser.Email, tt.wantUser.FirstName, tt.wantUser.LastName, tt.wantUser.PhoneNumber))
+			} else {
+				mockQuery.WillReturnError(sql.ErrNoRows)
+			}
+
+			gotUser, err := userService.GetUserByID(tt.userID)
+			if tt.wantErr != nil {
+				assert.Error(t, err)
+				assert.Nil(t, gotUser)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantUser, gotUser)
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())
