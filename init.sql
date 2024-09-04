@@ -1,3 +1,5 @@
+-- ORDERS SERVICE
+
 -- Create Users table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -38,35 +40,6 @@ CREATE TABLE payment_methods (
 );
 
 CREATE INDEX idx_payment_method_user_id ON payment_methods (user_id);
-
--- Create Categories table
-CREATE TABLE categories (
-    category_id SERIAL PRIMARY KEY,
-    category_name VARCHAR(100) UNIQUE NOT NULL
-);
-
--- Create Products table
-CREATE TABLE products (
-    product_id SERIAL PRIMARY KEY,
-    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
-    product_name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    stock_quantity INTEGER NOT NULL
-);
-
--- Create Reviews table
-CREATE TABLE reviews (
-    review_id SERIAL PRIMARY KEY,
-    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-    review_text TEXT,
-    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_review_product_id ON reviews (product_id);
-CREATE INDEX idx_review_user_id ON reviews (user_id);
 
 -- Create Shopping Carts table
 CREATE TABLE shopping_carts (
@@ -118,3 +91,35 @@ CREATE TABLE order_items (
 );
 
 CREATE INDEX idx_order_item_order_id ON order_items (order_id);
+
+
+-- PRODUCTS SERVICE
+
+-- Create Categories table
+CREATE TABLE categories (
+    category_id SERIAL PRIMARY KEY,
+    category_name VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Create Products table
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
+    product_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock_quantity INTEGER NOT NULL
+);
+
+-- Create Reviews table
+CREATE TABLE reviews (
+    review_id SERIAL PRIMARY KEY,
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_review_product_id ON reviews (product_id);
+CREATE INDEX idx_review_user_id ON reviews (user_id);
