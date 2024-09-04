@@ -1,6 +1,12 @@
-- 1. Create the db, tables, and columns
-- 2. Init the golang project
-- 3. Create the models
-- 4. Create the handlers
-- 5. Create the routes
-- 6. Create the database functions
+1. Order Service:
+
+   - Manage customer orders
+   - Handle payment processing
+   - Manage user accounts and authentication
+   - Handle shopping cart functionality
+
+2. Product Service:
+
+   - Manage product catalog
+   - Handle inventory
+   - Process product searches and filtering
