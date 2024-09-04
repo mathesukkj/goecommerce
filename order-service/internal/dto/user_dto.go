@@ -29,6 +29,14 @@ func (l *LoginPayload) Validate() error {
 
 // used for login and signup response
 type LoginResponse struct {
-	UserID int    `json:"user_id"`
-	Token  string `json:"token"`
+	Token string `json:"token"`
+}
+
+type UserPayload struct {
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	Email       string `json:"email"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	PhoneNumber string `json:"phone_number"`
 }
