@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"os"
 	"time"
@@ -8,12 +9,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
+	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	ErrPasswordTooLong = errors.New("password too long")
 	ErrUserExists      = errors.New("user with this username or email already exists")
+	ErrUserNotFound    = errors.New("user not found")
 )
 
 type UserService struct {
@@ -69,6 +72,29 @@ func (s *UserService) CreateUser(user dto.UserPayload) (int, error) {
 	}
 
 	return userId, nil
+}
+
+func (s *UserService) Login(login dto.LoginPayload) (*dto.LoginResponse, error) {
+	query := `SELECT user_id, password FROM users WHERE email = $1`
+
+	var user entity.User
+	err := s.db.QueryRowx(query, login.Email).Scan(&user.UserID, &user.Password)
+	if err == sql.ErrNoRows {
+		return nil, ErrUserNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
+		return nil, err
+	}
+
+	token, err := generateToken(user.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.LoginResponse{Token: token}, nil
 }
 
 func generateToken(userId int) (string, error) {

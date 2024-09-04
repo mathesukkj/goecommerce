@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
+	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 )
@@ -177,6 +178,79 @@ func TestCreateUser(t *testing.T) {
 			if tt.err == ErrPasswordTooLong {
 				assert.Equal(t, tt.err, err)
 			}
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestLogin(t *testing.T) {
+	userService, mock := setupUserService(t)
+	seedUsers(t, userService)
+	query := `SELECT user_id, password FROM users WHERE email = $1`
+
+	tests := []struct {
+		name     string
+		login    dto.LoginPayload
+		mockUser *entity.User
+		wantErr  bool
+	}{
+		{
+			name: "successful login",
+			login: dto.LoginPayload{
+				Email:    "test@example.com",
+				Password: "password123",
+			},
+			mockUser: &entity.User{
+				UserID:   1,
+				Password: "$2y$10$zuljQprm6i1NQTGfQgB/xeC7wu44vtsb3./R8LuydUc6m1CdS8ziK",
+			},
+			wantErr: false,
+		},
+		{
+			name: "user not found",
+			login: dto.LoginPayload{
+				Email:    "nonexistent@example.com",
+				Password: "password123",
+			},
+			mockUser: nil,
+			wantErr:  true,
+		},
+		{
+			name: "incorrect password",
+			login: dto.LoginPayload{
+				Email:    "test@example.com",
+				Password: "wrongpassword",
+			},
+			mockUser: &entity.User{
+				UserID:   1,
+				Password: "$2a$10$1234567890123456789012",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockQuery := mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.login.Email)
+
+			if tt.mockUser == nil {
+				mockQuery.WillReturnError(ErrUserNotFound)
+			} else {
+				mockQuery.WillReturnRows(sqlmock.NewRows([]string{"user_id", "password"}).
+					AddRow(tt.mockUser.UserID, tt.mockUser.Password))
+			}
+
+			response, err := userService.Login(tt.login)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, response)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+				assert.NotEmpty(t, response.Token)
+			}
+
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
