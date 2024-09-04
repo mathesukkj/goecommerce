@@ -7,6 +7,7 @@ CREATE TABLE users (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     phone_number VARCHAR(20)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_user_email ON users (email);
@@ -20,6 +21,7 @@ CREATE TABLE addresses (
     state VARCHAR(50),
     postal_code VARCHAR(20) NOT NULL,
     country VARCHAR(50) NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_address_user_id ON addresses (user_id);
@@ -32,6 +34,7 @@ CREATE TABLE payment_methods (
     card_number VARCHAR(16),
     expiration_date DATE,
     card_holder_name VARCHAR(100)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_payment_method_user_id ON payment_methods (user_id);
@@ -68,8 +71,7 @@ CREATE INDEX idx_review_user_id ON reviews (user_id);
 -- Create Shopping Carts table
 CREATE TABLE shopping_carts (
     cart_id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_cart_user_id ON shopping_carts (user_id);
@@ -80,6 +82,7 @@ CREATE TABLE cart_items (
     cart_id INTEGER REFERENCES shopping_carts(cart_id),
     product_id INTEGER REFERENCES products(product_id),
     quantity INTEGER NOT NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_cart_item_cart_id ON cart_items (cart_id);
