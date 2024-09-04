@@ -8,16 +8,17 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
 	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	ErrPasswordTooLong = errors.New("password too long")
-	ErrUserExists      = errors.New("user with this username or email already exists")
-	ErrUserNotFound    = errors.New("user not found")
-	ErrInvalidPassword = errors.New("invalid user or password")
+	ErrPasswordTooLong   = errors.New("password too long")
+	ErrUserAlreadyExists = errors.New("user with this username or email already exists")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidPassword   = errors.New("invalid user or password")
 )
 
 type UserService struct {
@@ -69,6 +70,11 @@ func (s *UserService) CreateUser(user dto.SignupPayload) (int, error) {
 		&userId,
 	)
 	if err != nil {
+		if pgErr, ok := err.(*pq.Error); ok {
+			if pgErr.Code.Name() == "unique_violation" {
+				return 0, ErrUserAlreadyExists
+			}
+		}
 		return 0, err
 	}
 

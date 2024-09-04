@@ -30,7 +30,15 @@ func (h *UserHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token, err := h.service.Signup(body)
-	if err != nil {
+	switch err {
+	case service.ErrUserAlreadyExists:
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	case service.ErrPasswordTooLong:
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	case nil:
+	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

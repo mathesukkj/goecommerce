@@ -52,10 +52,79 @@ func seedUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to seed users: %s", err)
 	}
+}
 
-	row := db.QueryRowx("SELECT user_id FROM users WHERE email = $1", "test@example.com")
-	var userId int
-	row.Scan(&userId)
+func TestUserHandler_Signup(t *testing.T) {
+	userHandler, _ := setupUserHandler(t)
+	seedUsers(t)
+
+	tests := []struct {
+		name    string
+		payload dto.SignupPayload
+		want    int
+	}{
+		{
+			name: "success",
+			payload: dto.SignupPayload{
+				Username:    "user2",
+				Password:    "password",
+				Email:       "test2@example.com",
+				FirstName:   "user2",
+				LastName:    "User2",
+				PhoneNumber: "1234567890",
+			},
+			want: http.StatusOK,
+		},
+		{
+			name: "invalid payload",
+			payload: dto.SignupPayload{
+				Username: "",
+				Password: "password",
+				Email:    "test@example.com",
+			},
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "user with email already exists",
+			payload: dto.SignupPayload{
+				Username:    "user2",
+				Password:    "password",
+				Email:       "test@example.com",
+				FirstName:   "user",
+				LastName:    "User",
+				PhoneNumber: "1234567890",
+			},
+			want: http.StatusConflict,
+		},
+		{
+			name: "user with username already exists",
+			payload: dto.SignupPayload{
+				Username:    "user",
+				Password:    "password",
+				Email:       "test2@example.com",
+				FirstName:   "user",
+				LastName:    "User",
+				PhoneNumber: "1234567890",
+			},
+			want: http.StatusConflict,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(tt.payload)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, "/signup", bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			rr := httptest.NewRecorder()
+
+			userHandler.Signup(rr, req)
+
+			assert.Equal(t, tt.want, rr.Code)
+		})
+	}
 }
 
 func TestUserHandler_Login(t *testing.T) {
