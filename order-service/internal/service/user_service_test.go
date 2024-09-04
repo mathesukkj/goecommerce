@@ -47,6 +47,70 @@ func seedUsers(t *testing.T, service *UserService) {
 	`, params)
 }
 
+func TestSignup(t *testing.T) {
+	userService, mock := setupUserService(t)
+	seedUsers(t, userService)
+	query := `
+		INSERT INTO users (username, password, email, first_name, last_name, phone_number)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING user_id
+	`
+
+	tests := []struct {
+		name    string
+		user    dto.UserPayload
+		err     error
+		wantErr bool
+	}{
+		{
+			name: "valid user payload",
+			user: dto.UserPayload{
+				Username:    "testuser",
+				Password:    "testpassword",
+				Email:       "testuser@example.com",
+				FirstName:   "Test",
+				LastName:    "User",
+				PhoneNumber: "1234567890",
+			},
+			err:     nil,
+			wantErr: false,
+		},
+		{
+			name: "non-unique username",
+			user: dto.UserPayload{
+				Username:    "user",
+				Password:    "password",
+				Email:       "testuser@example.com",
+				FirstName:   "Test",
+				LastName:    "User",
+				PhoneNumber: "1234567890",
+			},
+			err:     nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.wantErr {
+				mock.
+					ExpectQuery(regexp.QuoteMeta(query)).
+					WithArgs(tt.user.Username, sqlmock.AnyArg(), tt.user.Email, tt.user.FirstName, tt.user.LastName, tt.user.PhoneNumber).
+					WillReturnRows(sqlmock.NewRows([]string{"user_id"}).AddRow(1))
+			}
+
+			got, err := userService.Signup(tt.user)
+			if tt.wantErr {
+				assert.Error(t, err, "signup() should have returned an error")
+				return
+			}
+
+			assert.NoError(t, err, "signup() unexpected error")
+			assert.NotNil(t, got, "signup() returned unexpected user_id")
+		})
+	}
+}
+
 func TestCreateUser(t *testing.T) {
 	userService, mock := setupUserService(t)
 	seedUsers(t, userService)
