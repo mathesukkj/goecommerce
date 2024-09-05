@@ -80,3 +80,19 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(response)
 }
+
+func (h *UserHandler) GetLoggedInUser(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(int)
+	if !ok {
+		http.Error(w, "user not logged in", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.service.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
+}

@@ -2,7 +2,9 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
+	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 	"github.com/mathesukkj/goecommerce/order-service/pkg/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -28,6 +31,7 @@ func setupUserHandler(t *testing.T) (*UserHandler, *postgres.PostgresContainer) 
 	t.Helper()
 
 	db.MustExec("TRUNCATE TABLE users CASCADE")
+	db.MustExec("ALTER SEQUENCE users_user_id_seq RESTART WITH 1")
 
 	userHandler := NewUserHandler(db)
 	return userHandler, pgContainer
@@ -54,7 +58,7 @@ func seedUsers(t *testing.T) {
 	}
 }
 
-func TestUserHandler_Signup(t *testing.T) {
+func TestSignup(t *testing.T) {
 	userHandler, _ := setupUserHandler(t)
 	seedUsers(t)
 
@@ -115,7 +119,7 @@ func TestUserHandler_Signup(t *testing.T) {
 			body, err := json.Marshal(tt.payload)
 			assert.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/signup", bytes.NewBuffer(body))
+			req := httptest.NewRequest(http.MethodPost, "/users/signup", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
@@ -127,7 +131,7 @@ func TestUserHandler_Signup(t *testing.T) {
 	}
 }
 
-func TestUserHandler_Login(t *testing.T) {
+func TestLogin(t *testing.T) {
 	userHandler, _ := setupUserHandler(t)
 	seedUsers(t)
 
@@ -167,7 +171,7 @@ func TestUserHandler_Login(t *testing.T) {
 			body, err := json.Marshal(tt.payload)
 			assert.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+			req := httptest.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
@@ -175,6 +179,60 @@ func TestUserHandler_Login(t *testing.T) {
 			userHandler.Login(rr, req)
 
 			assert.Equal(t, tt.want, rr.Code)
+		})
+	}
+}
+
+func TestGetLoggedInUser(t *testing.T) {
+	userHandler, _ := setupUserHandler(t)
+	seedUsers(t)
+
+	tests := []struct {
+		name       string
+		userID     int
+		wantStatus int
+		wantUser   *entity.User
+	}{
+		{
+			name:       "success",
+			userID:     1,
+			wantStatus: http.StatusOK,
+			wantUser: &entity.User{
+				UserID:      1,
+				Username:    "user",
+				Email:       "test@example.com",
+				FirstName:   "user",
+				LastName:    "User",
+				PhoneNumber: "1234567890",
+			},
+		},
+		{
+			name:       "user not logged in",
+			userID:     0,
+			wantStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/users/me", nil)
+			ctx := req.Context()
+			ctx = context.WithValue(ctx, "user_id", tt.userID)
+			req = req.WithContext(ctx)
+
+			rr := httptest.NewRecorder()
+
+			userHandler.GetLoggedInUser(rr, req)
+
+			assert.Equal(t, tt.wantStatus, rr.Code)
+
+			if tt.wantUser != nil {
+				fmt.Println(rr.Body)
+				var gotUser entity.User
+				err := json.NewDecoder(rr.Body).Decode(&gotUser)
+				assert.NoError(t, err)
+				assert.Equal(t, *tt.wantUser, gotUser)
+			}
 		})
 	}
 }
