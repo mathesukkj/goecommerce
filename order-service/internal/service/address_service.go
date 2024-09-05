@@ -2,7 +2,7 @@ package service
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
@@ -12,6 +12,10 @@ import (
 type AddressService struct {
 	db *sqlx.DB
 }
+
+var (
+	ErrAddressNotFound = errors.New("address not found")
+)
 
 func NewAddressService(db *sqlx.DB) *AddressService {
 	return &AddressService{db: db}
@@ -91,7 +95,7 @@ func (s *AddressService) UpdateAddress(addressID int, address dto.AddressPayload
 		addressID,
 	).StructScan(&updatedAddress); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("address not found")
+			return nil, ErrAddressNotFound
 		}
 		return nil, err
 	}
@@ -113,7 +117,7 @@ func (s *AddressService) DeleteAddress(addressID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("address not found")
+		return ErrAddressNotFound
 	}
 
 	return nil
