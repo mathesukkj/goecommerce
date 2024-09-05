@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -227,7 +226,6 @@ func TestGetLoggedInUser(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, rr.Code)
 
 			if tt.wantUser != nil {
-				fmt.Println(rr.Body)
 				var gotUser entity.User
 				err := json.NewDecoder(rr.Body).Decode(&gotUser)
 				assert.NoError(t, err)
@@ -235,4 +233,93 @@ func TestGetLoggedInUser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	userHandler, _ := setupUserHandler(t)
+	seedUsers(t)
+
+	tests := []struct {
+		name       string
+		userID     int
+		payload    dto.UpdateUserPayload
+		wantStatus int
+		wantUser   *entity.User
+	}{
+		{
+			name:   "success",
+			userID: 1,
+			payload: dto.UpdateUserPayload{
+				Username:    "updateduser",
+				Email:       "updated@example.com",
+				FirstName:   "Updated",
+				LastName:    "User",
+				PhoneNumber: "9876543210",
+			},
+			wantStatus: http.StatusOK,
+			wantUser: &entity.User{
+				UserID:      1,
+				Username:    "updateduser",
+				Email:       "updated@example.com",
+				FirstName:   "Updated",
+				LastName:    "User",
+				PhoneNumber: "9876543210",
+			},
+		},
+		{
+			name:   "user not logged in",
+			userID: 0,
+			payload: dto.UpdateUserPayload{
+				Username: "updateduser",
+			},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:   "invalid payload",
+			userID: 1,
+			payload: dto.UpdateUserPayload{
+				Username: "",
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:   "user not found",
+			userID: 999,
+			payload: dto.UpdateUserPayload{
+				Username:    "updateduser",
+				Email:       "updated@example.com",
+				FirstName:   "Updated",
+				LastName:    "User",
+				PhoneNumber: "9876543210",
+			},
+			wantStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			payloadBytes, _ := json.Marshal(tt.payload)
+			req := httptest.NewRequest(http.MethodPut, "/users/me", bytes.NewBuffer(payloadBytes))
+			req.Header.Set("Content-Type", "application/json")
+			if tt.userID != 0 {
+				ctx := req.Context()
+				ctx = context.WithValue(ctx, "user_id", tt.userID)
+				req = req.WithContext(ctx)
+			}
+
+			rr := httptest.NewRecorder()
+
+			userHandler.UpdateUser(rr, req)
+
+			assert.Equal(t, tt.wantStatus, rr.Code)
+
+			if tt.wantUser != nil {
+				var gotUser entity.User
+				err := json.NewDecoder(rr.Body).Decode(&gotUser)
+				assert.NoError(t, err)
+				assert.Equal(t, *tt.wantUser, gotUser)
+			}
+		})
+	}
+
 }

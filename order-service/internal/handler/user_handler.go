@@ -96,3 +96,33 @@ func (h *UserHandler) GetLoggedInUser(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(user)
 }
+
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(int)
+	if !ok {
+		http.Error(w, "user not logged in", http.StatusUnauthorized)
+		return
+	}
+
+	var body dto.UpdateUserPayload
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := body.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	updatedUser, err := h.service.UpdateUser(userID, body)
+	if err == service.ErrUserNotFound {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(updatedUser)
+}
