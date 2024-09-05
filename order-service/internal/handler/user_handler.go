@@ -9,6 +9,12 @@ import (
 	"github.com/mathesukkj/goecommerce/order-service/internal/service"
 )
 
+type key string
+
+const (
+	keyUserId key = "user_id"
+)
+
 type UserHandler struct {
 	service *service.UserService
 }
@@ -82,7 +88,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetLoggedInUser(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("user_id").(int)
+	userID, ok := r.Context().Value(keyUserId).(int)
 	if !ok {
 		http.Error(w, "user not logged in", http.StatusUnauthorized)
 		return
@@ -98,7 +104,7 @@ func (h *UserHandler) GetLoggedInUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("user_id").(int)
+	userID, ok := r.Context().Value(keyUserId).(int)
 	if !ok {
 		http.Error(w, "user not logged in", http.StatusUnauthorized)
 		return

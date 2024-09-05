@@ -216,7 +216,7 @@ func TestGetLoggedInUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/users/me", nil)
 			ctx := req.Context()
-			ctx = context.WithValue(ctx, "user_id", tt.userID)
+			ctx = context.WithValue(ctx, keyUserId, tt.userID)
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
@@ -303,7 +303,7 @@ func TestUpdateUser(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			if tt.userID != 0 {
 				ctx := req.Context()
-				ctx = context.WithValue(ctx, "user_id", tt.userID)
+				ctx = context.WithValue(ctx, keyUserId, tt.userID)
 				req = req.WithContext(ctx)
 			}
 
