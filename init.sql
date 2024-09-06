@@ -51,7 +51,7 @@ CREATE TABLE products (
     category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
     product_name VARCHAR(255) NOT NULL,
     description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
+    price INT NOT NULL,
     stock_quantity INTEGER NOT NULL
 );
 
@@ -87,20 +87,12 @@ CREATE TABLE cart_items (
 
 CREATE INDEX idx_cart_item_cart_id ON cart_items (cart_id);
 
--- Create Shipping Methods table
-CREATE TABLE shipping_methods (
-    shipping_method_id SERIAL PRIMARY KEY,
-    method_name VARCHAR(100) NOT NULL,
-    price DECIMAL(10, 2) NOT NULL
-);
-
 -- Create Orders table
 CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id),
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    total_amount DECIMAL(10, 2) NOT NULL,
-    shipping_method_id INTEGER REFERENCES shipping_methods(shipping_method_id),
+    total_amount INT NOT NULL,
     payment_method_id INTEGER REFERENCES payment_methods(payment_method_id),
     shipping_address_id INTEGER REFERENCES addresses(address_id),
     order_status VARCHAR(50) NOT NULL
@@ -114,7 +106,7 @@ CREATE TABLE order_items (
     order_id INTEGER REFERENCES orders(order_id),
     product_id INTEGER REFERENCES products(product_id),
     quantity INTEGER NOT NULL,
-    price_per_unit DECIMAL(10, 2) NOT NULL
+    price_per_unit INT NOT NULL
 );
 
 CREATE INDEX idx_order_item_order_id ON order_items (order_id);
