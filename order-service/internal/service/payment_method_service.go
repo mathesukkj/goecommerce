@@ -22,7 +22,7 @@ func NewPaymentMethodService(db *sqlx.DB) *PaymentMethodService {
 }
 
 func (s *PaymentMethodService) ListUserPaymentMethods(userID int) ([]entity.PaymentMethod, error) {
-	query := `SELECT * FROM payment_methods WHERE user_id = $1`
+	query := `SELECT payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name FROM payment_methods WHERE user_id = $1`
 
 	var paymentMethods []entity.PaymentMethod
 	rows, err := s.db.Queryx(query, userID)
@@ -42,11 +42,14 @@ func (s *PaymentMethodService) ListUserPaymentMethods(userID int) ([]entity.Paym
 	return paymentMethods, nil
 }
 
-func (s *PaymentMethodService) GetPaymentMethodByID(paymentMethodID int) (*entity.PaymentMethod, error) {
-	query := `SELECT * FROM payment_methods WHERE payment_method_id = $1`
+func (s *PaymentMethodService) GetPaymentMethodByID(paymentMethodID, userID int) (*entity.PaymentMethod, error) {
+	query := `SELECT payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name FROM payment_methods WHERE payment_method_id = $1 AND user_id = $2`
 
 	var paymentMethod entity.PaymentMethod
-	if err := s.db.QueryRowx(query, paymentMethodID).StructScan(&paymentMethod); err != nil {
+	if err := s.db.QueryRowx(query, paymentMethodID, userID).StructScan(&paymentMethod); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrPaymentMethodNotFound
+		}
 		return nil, err
 	}
 
@@ -56,8 +59,8 @@ func (s *PaymentMethodService) GetPaymentMethodByID(paymentMethodID int) (*entit
 func (s *PaymentMethodService) CreatePaymentMethod(payload dto.PaymentMethodPayload, userId int) (*entity.PaymentMethod, error) {
 	query := `
 		INSERT INTO payment_methods (user_id,  payment_type, card_number, expiration_date, card_holder_name)
-		VALUES (:user_id, :payment_type, :card_number, :expiration_date, :card_holder_name)
-		RETURNING *
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name
 	`
 
 	var createdPaymentMethod entity.PaymentMethod
@@ -78,9 +81,9 @@ func (s *PaymentMethodService) CreatePaymentMethod(payload dto.PaymentMethodPayl
 func (s *PaymentMethodService) UpdatePaymentMethod(paymentMethodID int, paymentMethod dto.PaymentMethodPayload) (*entity.PaymentMethod, error) {
 	query := `
 		UPDATE payment_methods
-		SET payment_type = :payment_type, card_number = :card_number, expiration_date = :expiration_date, card_holder_name = :card_holder_name
-		WHERE payment_method_id = :payment_method_id
-		RETURNING *
+		SET payment_type = $1, card_number = $2, expiration_date = $3, card_holder_name = $4
+		WHERE payment_method_id = $5
+		RETURNING payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name
 	`
 
 	var updatedPaymentMethod entity.PaymentMethod

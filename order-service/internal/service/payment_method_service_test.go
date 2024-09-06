@@ -44,7 +44,7 @@ func seedPaymentMethods(t *testing.T, service *PaymentMethodService) {
 func TestListUserPaymentMethods(t *testing.T) {
 	paymentMethodService, mock := setupPaymentMethodService(t)
 	seedPaymentMethods(t, paymentMethodService)
-	query := "SELECT * FROM payment_methods WHERE user_id = $1"
+	query := `SELECT payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name FROM payment_methods WHERE user_id = $1`
 
 	tests := []struct {
 		name    string
@@ -88,17 +88,19 @@ func TestListUserPaymentMethods(t *testing.T) {
 func TestGetPaymentMethodByID(t *testing.T) {
 	paymentMethodService, mock := setupPaymentMethodService(t)
 	seedPaymentMethods(t, paymentMethodService)
-	query := "SELECT * FROM payment_methods WHERE payment_method_id = $1"
+	query := `SELECT payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name FROM payment_methods WHERE payment_method_id = $1 AND user_id = $2`
 
 	tests := []struct {
 		name            string
 		paymentMethodID int
+		userID          int
 		want            *entity.PaymentMethod
 		wantErr         bool
 	}{
 		{
 			name:            "existing payment method",
 			paymentMethodID: 1,
+			userID:          1,
 			want: &entity.PaymentMethod{
 				PaymentMethodID: 1,
 				UserID:          1,
@@ -125,9 +127,9 @@ func TestGetPaymentMethodByID(t *testing.T) {
 				rows.AddRow(tt.paymentMethodID, 1, "Credit Card", "1234567890123456", "2025-12-31", "John Doe")
 			}
 
-			mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.paymentMethodID).WillReturnRows(rows)
+			mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.paymentMethodID, tt.userID).WillReturnRows(rows)
 
-			got, err := paymentMethodService.GetPaymentMethodByID(tt.paymentMethodID)
+			got, err := paymentMethodService.GetPaymentMethodByID(tt.paymentMethodID, tt.userID)
 			assert.Equal(t, tt.wantErr, err != nil, "GetPaymentMethodByID() error = %v, wantErr %v", err, tt.wantErr)
 			if !tt.wantErr {
 				assert.Equal(t, tt.want, got, "GetPaymentMethodByID() got = %v, want %v", got, tt.want)
@@ -138,12 +140,11 @@ func TestGetPaymentMethodByID(t *testing.T) {
 
 func TestCreatePaymentMethod(t *testing.T) {
 	paymentMethodService, mock := setupPaymentMethodService(t)
-
 	query := `
-		INSERT INTO payment_methods (user_id, payment_type, card_number, expiration_date, card_holder_name)
-		VALUES (:user_id, :payment_type, :card_number, :expiration_date, :card_holder_name)
-		RETURNING *
-	`
+	INSERT INTO payment_methods (user_id,  payment_type, card_number, expiration_date, card_holder_name)
+	VALUES ($1, $2, $3, $4, $5)
+	RETURNING payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name
+`
 
 	tests := []struct {
 		name    string
@@ -190,9 +191,9 @@ func TestUpdatePaymentMethod(t *testing.T) {
 	paymentMethodService, mock := setupPaymentMethodService(t)
 	query := `
 		UPDATE payment_methods
-		SET payment_type = :payment_type, card_number = :card_number, expiration_date = :expiration_date, card_holder_name = :card_holder_name
-		WHERE payment_method_id = :payment_method_id
-		RETURNING *
+		SET payment_type = $1, card_number = $2, expiration_date = $3, card_holder_name = $4
+		WHERE payment_method_id = $5
+		RETURNING payment_method_id, user_id, payment_type, card_number, expiration_date, card_holder_name
 	`
 
 	tests := []struct {

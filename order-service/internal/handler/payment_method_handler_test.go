@@ -112,10 +112,9 @@ func TestGetPaymentMethodByID(t *testing.T) {
 			expectedStatus:  http.StatusOK,
 			expectedPaymentMethod: &entity.PaymentMethod{
 				PaymentMethodID: 1,
-				UserID:          1,
 				PaymentType:     "credit_card",
-				CardNumber:      "1234-5678-9012-3456",
-				ExpirationDate:  "2025-12-31",
+				CardNumber:      "1234567890123456",
+				ExpirationDate:  "2025-12-31T00:00:00Z",
 				CardHolderName:  "John Doe",
 			},
 		},
@@ -136,7 +135,11 @@ func TestGetPaymentMethodByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/payment-methods/"+tt.paymentMethodID, nil)
+			req.SetPathValue("payment_method_id", tt.paymentMethodID)
 			assert.NoError(t, err)
+
+			ctx := context.WithValue(req.Context(), keyUserId, 1)
+			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
 			paymentMethodHandler.GetPaymentMethodByID(rr, req)
@@ -169,17 +172,16 @@ func TestCreatePaymentMethod(t *testing.T) {
 			userID: 1,
 			payload: dto.PaymentMethodPayload{
 				PaymentType:    "credit_card",
-				CardNumber:     "1234-5678-9012-3456",
+				CardNumber:     "1234567890123456",
 				ExpirationDate: "2025-12-31",
 				CardHolderName: "John Doe",
 			},
 			expectedStatus: http.StatusOK,
 			expectedPaymentMethod: &entity.PaymentMethod{
-				PaymentMethodID: 1,
-				UserID:          1,
+				PaymentMethodID: 2,
 				PaymentType:     "credit_card",
-				CardNumber:      "1234-5678-9012-3456",
-				ExpirationDate:  "2025-12-31",
+				CardNumber:      "1234567890123456",
+				ExpirationDate:  "2025-12-31T00:00:00Z",
 				CardHolderName:  "John Doe",
 			},
 		},
@@ -229,17 +231,16 @@ func TestUpdatePaymentMethod(t *testing.T) {
 			paymentMethodID: "1",
 			payload: dto.PaymentMethodPayload{
 				PaymentType:    "credit_card",
-				CardNumber:     "1235-5678-9012-3456",
+				CardNumber:     "1235567890123456",
 				ExpirationDate: "2025-12-31",
 				CardHolderName: "John Doe",
 			},
 			expectedStatus: http.StatusOK,
 			expectedPaymentMethod: &entity.PaymentMethod{
 				PaymentMethodID: 1,
-				UserID:          1,
 				PaymentType:     "credit_card",
-				CardNumber:      "1235-5678-9012-3456",
-				ExpirationDate:  "2025-12-31",
+				CardNumber:      "1235567890123456",
+				ExpirationDate:  "2025-12-31T00:00:00Z",
 				CardHolderName:  "John Doe",
 			},
 		},
@@ -253,6 +254,7 @@ func TestUpdatePaymentMethod(t *testing.T) {
 				"/payment-methods/"+tt.paymentMethodID,
 				bytes.NewBuffer(payload),
 			)
+			req.SetPathValue("payment_method_id", tt.paymentMethodID)
 			assert.NoError(t, err)
 
 			ctx := context.WithValue(req.Context(), keyUserId, 1)
@@ -308,6 +310,7 @@ func TestDeletePaymentMethod(t *testing.T) {
 				"/payment-methods/"+tt.paymentMethodID,
 				nil,
 			)
+			req.SetPathValue("payment_method_id", tt.paymentMethodID)
 			assert.NoError(t, err)
 
 			rr := httptest.NewRecorder()
