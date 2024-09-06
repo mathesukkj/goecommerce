@@ -22,7 +22,7 @@ func NewAddressService(db *sqlx.DB) *AddressService {
 }
 
 func (s *AddressService) ListUserAddresses(userID int) ([]entity.Address, error) {
-	query := `SELECT * FROM addresses WHERE user_id = $1`
+	query := `SELECT address_id, user_id, street_address, city, state, postal_code, country FROM addresses WHERE user_id = $1`
 
 	var addresses []entity.Address
 	rows, err := s.db.Queryx(query, userID)
@@ -43,7 +43,7 @@ func (s *AddressService) ListUserAddresses(userID int) ([]entity.Address, error)
 }
 
 func (s *AddressService) GetAddressByID(addressID int) (*entity.Address, error) {
-	query := `SELECT * FROM addresses WHERE address_id = $1`
+	query := `SELECT address_id, user_id, street_address, city, state, postal_code, country  FROM addresses WHERE address_id = $1`
 
 	var address entity.Address
 	if err := s.db.QueryRowx(query, addressID).StructScan(&address); err != nil {
@@ -81,7 +81,7 @@ func (s *AddressService) UpdateAddress(addressID int, address dto.AddressPayload
 		UPDATE addresses
 		SET street_address = :street_address, city = :city, state = :state, postal_code = :postal_code, country = :country
 		WHERE address_id = :address_id
-		RETURNING *
+		RETURNING address_id, user_id, street_address, city, state, postal_code, country
 	`
 
 	var updatedAddress entity.Address

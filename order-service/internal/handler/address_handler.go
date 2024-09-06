@@ -20,7 +20,7 @@ func NewAddressHandler(db *sqlx.DB) *AddressHandler {
 
 func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(keyUserId).(int)
-	if !ok {
+	if !ok || userID == 0 {
 		http.Error(w, "user not logged in", http.StatusUnauthorized)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *AddressHandler) GetAddressByID(w http.ResponseWriter, r *http.Request) 
 
 func (h *AddressHandler) CreateAddress(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(keyUserId).(int)
-	if !ok {
+	if !ok || userID == 0 {
 		http.Error(w, "user not logged in", http.StatusUnauthorized)
 		return
 	}

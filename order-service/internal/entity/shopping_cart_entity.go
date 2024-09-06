@@ -1,7 +1,5 @@
 package entity
 
-import "time"
-
 type ShoppingCart struct {
 	CartID int `json:"cart_id"`
 	UserID int `json:"user_id"`
@@ -12,5 +10,4 @@ type ShoppingCartItem struct {
 	CartItemID int `json:"cart_item_id"`
 	ProductID  int `json:"product_id"`
 	Quantity   int `json:"quantity"`
-	CreatedAt  time.Time
 }

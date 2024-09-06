@@ -8,17 +8,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
-	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
+	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 )
 
 func setupAddressHandler(t *testing.T) (*AddressHandler, *postgres.PostgresContainer) {
 	t.Helper()
 
-	db.MustExec("TRUNCATE TABLE address CASCADE")
-	db.MustExec("ALTER SEQUENCE address_address_id_seq RESTART WITH 1")
+	db.MustExec("TRUNCATE TABLE addresses CASCADE")
+	db.MustExec("ALTER SEQUENCE addresses_address_id_seq RESTART WITH 1")
 	db.MustExec("TRUNCATE TABLE users CASCADE")
 	db.MustExec("ALTER SEQUENCE users_user_id_seq RESTART WITH 1")
 
@@ -26,21 +27,23 @@ func setupAddressHandler(t *testing.T) (*AddressHandler, *postgres.PostgresConta
 	return addressHandler, pgContainer
 }
 
-func seedAddresss(t *testing.T) {
+func seedAddress(t *testing.T) {
 	t.Helper()
 
+	seedUsers(t)
+
 	params := map[string]interface{}{
-		"addressname":  "address",
-		"password":     "$2y$10$bsRLuOQN606nDdkFCF2D4eF74rON7JXEP.RxTAKbgTft2BgqtJgYu",
-		"email":        "test@example.com",
-		"first_name":   "address",
-		"last_name":    "Address",
-		"phone_number": "1234567890",
+		"user_id":        1,
+		"street_address": "123 Main St",
+		"city":           "Anytown",
+		"state":          "CA",
+		"postal_code":    "12345",
+		"country":        "USA",
 	}
 
 	_, err := db.NamedExec(`
-		INSERT INTO address (addressname, password, email, first_name, last_name, phone_number) 
-		VALUES (:addressname, :password, :email, :first_name, :last_name, :phone_number)
+		INSERT INTO addresses (user_id, street_address, city, state, postal_code, country) 
+    VALUES (:user_id, :street_address, :city, :state, :postal_code, :country)
 	`, params)
 	if err != nil {
 		t.Fatalf("failed to seed address: %s", err)
@@ -49,7 +52,7 @@ func seedAddresss(t *testing.T) {
 
 func TestListUserAddresses(t *testing.T) {
 	addressHandler, _ := setupAddressHandler(t)
-	seedAddresss(t)
+	seedAddress(t)
 
 	tests := []struct {
 		name           string
@@ -80,9 +83,7 @@ func TestListUserAddresses(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(addressHandler.ListUserAddresses)
-
-			handler.ServeHTTP(rr, req)
+			addressHandler.ListUserAddresses(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
@@ -98,8 +99,7 @@ func TestListUserAddresses(t *testing.T) {
 
 func TestGetAddressByID(t *testing.T) {
 	addressHandler, _ := setupAddressHandler(t)
-	seedAddresss(t)
-	seedUsers(t)
+	seedAddress(t)
 
 	tests := []struct {
 		name            string
@@ -138,12 +138,12 @@ func TestGetAddressByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/addresses/"+tt.addressID, nil)
+			req.SetPathValue("address_id", tt.addressID)
 			assert.NoError(t, err)
+			req.SetPathValue("address_id", tt.addressID)
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(addressHandler.GetAddressByID)
-
-			handler.ServeHTTP(rr, req)
+			addressHandler.GetAddressByID(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
@@ -159,8 +159,7 @@ func TestGetAddressByID(t *testing.T) {
 
 func TestCreateAddress(t *testing.T) {
 	addressHandler, _ := setupAddressHandler(t)
-	seedAddresss(t)
-	seedUsers(t)
+	seedAddress(t)
 
 	tests := []struct {
 		name            string
@@ -202,9 +201,7 @@ func TestCreateAddress(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(addressHandler.CreateAddress)
-
-			handler.ServeHTTP(rr, req)
+			addressHandler.CreateAddress(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
@@ -220,8 +217,7 @@ func TestCreateAddress(t *testing.T) {
 
 func TestUpdateAddress(t *testing.T) {
 	addressHandler, _ := setupAddressHandler(t)
-	seedAddresss(t)
-	seedUsers(t)
+	seedAddress(t)
 
 	tests := []struct {
 		name            string
@@ -255,16 +251,19 @@ func TestUpdateAddress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			payload, _ := json.Marshal(tt.payload)
-			req, err := http.NewRequest(http.MethodPut, "/addresses/"+tt.addressID, bytes.NewBuffer(payload))
+			req, err := http.NewRequest(
+				http.MethodPut,
+				"/addresses/"+tt.addressID,
+				bytes.NewBuffer(payload),
+			)
+			req.SetPathValue("address_id", tt.addressID)
 			assert.NoError(t, err)
 
 			ctx := context.WithValue(req.Context(), keyUserId, 1)
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(addressHandler.UpdateAddress)
-
-			handler.ServeHTTP(rr, req)
+			addressHandler.UpdateAddress(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
@@ -281,8 +280,7 @@ func TestUpdateAddress(t *testing.T) {
 
 func TestDeleteAddress(t *testing.T) {
 	addressHandler, _ := setupAddressHandler(t)
-	seedAddresss(t)
-	seedUsers(t)
+	seedAddress(t)
 
 	tests := []struct {
 		name           string
@@ -310,12 +308,11 @@ func TestDeleteAddress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodDelete, "/addresses/"+tt.addressID, nil)
+			req.SetPathValue("address_id", tt.addressID)
 			assert.NoError(t, err)
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(addressHandler.DeleteAddress)
-
-			handler.ServeHTTP(rr, req)
+			addressHandler.DeleteAddress(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})
