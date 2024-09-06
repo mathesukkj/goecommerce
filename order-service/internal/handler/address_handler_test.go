@@ -113,7 +113,6 @@ func TestGetAddressByID(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectedAddress: &entity.Address{
 				AddressID:     1,
-				UserID:        1,
 				StreetAddress: "123 Main St",
 				City:          "Anytown",
 				State:         "CA",
@@ -140,7 +139,9 @@ func TestGetAddressByID(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, "/addresses/"+tt.addressID, nil)
 			req.SetPathValue("address_id", tt.addressID)
 			assert.NoError(t, err)
-			req.SetPathValue("address_id", tt.addressID)
+
+			ctx := context.WithValue(req.Context(), keyUserId, 1)
+			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
 			addressHandler.GetAddressByID(rr, req)
@@ -180,8 +181,7 @@ func TestCreateAddress(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			expectedAddress: &entity.Address{
-				AddressID:     1,
-				UserID:        1,
+				AddressID:     2,
 				StreetAddress: "123 Main St",
 				City:          "Anytown",
 				State:         "CA",
@@ -239,8 +239,8 @@ func TestUpdateAddress(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectedAddress: &entity.Address{
 				AddressID:     1,
-				UserID:        1,
 				StreetAddress: "123 Main St",
+				City:          "Anytown",
 				State:         "CA",
 				PostalCode:    "12345",
 				Country:       "USA",

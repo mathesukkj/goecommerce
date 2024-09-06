@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
+
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
 	"github.com/mathesukkj/goecommerce/order-service/internal/service"
 )
@@ -41,7 +42,13 @@ func (h *AddressHandler) GetAddressByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	address, err := h.service.GetAddressByID(addressID)
+	userID, ok := r.Context().Value(keyUserId).(int)
+	if !ok || userID == 0 {
+		http.Error(w, "user not logged in", http.StatusUnauthorized)
+		return
+	}
+
+	address, err := h.service.GetAddressByID(addressID, userID)
 	if err == service.ErrAddressNotFound {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

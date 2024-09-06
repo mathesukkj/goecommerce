@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/jmoiron/sqlx"
+
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
 	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
 )
@@ -42,22 +43,28 @@ func (s *AddressService) ListUserAddresses(userID int) ([]entity.Address, error)
 	return addresses, nil
 }
 
-func (s *AddressService) GetAddressByID(addressID int) (*entity.Address, error) {
-	query := `SELECT address_id, user_id, street_address, city, state, postal_code, country  FROM addresses WHERE address_id = $1`
+func (s *AddressService) GetAddressByID(addressID, userID int) (*entity.Address, error) {
+	query := `SELECT address_id, street_address, city, state, postal_code, country  FROM addresses WHERE address_id = $1 AND user_id = $2`
 
 	var address entity.Address
-	if err := s.db.QueryRowx(query, addressID).StructScan(&address); err != nil {
+	if err := s.db.QueryRowx(query, addressID, userID).StructScan(&address); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrAddressNotFound
+		}
 		return nil, err
 	}
 
 	return &address, nil
 }
 
-func (s *AddressService) CreateAddress(address dto.AddressPayload, userId int) (*entity.Address, error) {
+func (s *AddressService) CreateAddress(
+	address dto.AddressPayload,
+	userId int,
+) (*entity.Address, error) {
 	query := `
 		INSERT INTO addresses (user_id, street_address, city, state, postal_code, country)
-		VALUES (:user_id, :street_address, :city, :state, :postal_code, :country)
-		RETURNING *
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING address_id, user_id, street_address, city, state, postal_code, country
 	`
 
 	var createdAddress entity.Address
@@ -76,11 +83,14 @@ func (s *AddressService) CreateAddress(address dto.AddressPayload, userId int) (
 	return &createdAddress, nil
 }
 
-func (s *AddressService) UpdateAddress(addressID int, address dto.AddressPayload) (*entity.Address, error) {
+func (s *AddressService) UpdateAddress(
+	addressID int,
+	address dto.AddressPayload,
+) (*entity.Address, error) {
 	query := `
 		UPDATE addresses
-		SET street_address = :street_address, city = :city, state = :state, postal_code = :postal_code, country = :country
-		WHERE address_id = :address_id
+		SET street_address = $1, city = $2, state = $3, postal_code = $4, country = $5
+		WHERE address_id = $6
 		RETURNING address_id, user_id, street_address, city, state, postal_code, country
 	`
 

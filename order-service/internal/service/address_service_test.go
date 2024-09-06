@@ -6,9 +6,10 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mathesukkj/goecommerce/order-service/internal/dto"
 	"github.com/mathesukkj/goecommerce/order-service/internal/entity"
-	"github.com/stretchr/testify/assert"
 )
 
 func setupAddressService(t *testing.T) (*AddressService, sqlmock.Sqlmock) {
@@ -68,7 +69,17 @@ func TestListUserAddresses(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rows := sqlmock.NewRows([]string{"address_id", "user_id", "street_address", "city", "state", "postal_code", "country"})
+			rows := sqlmock.NewRows(
+				[]string{
+					"address_id",
+					"user_id",
+					"street_address",
+					"city",
+					"state",
+					"postal_code",
+					"country",
+				},
+			)
 
 			if tt.want > 0 {
 				rows.AddRow(1, tt.userID, "123 Main St", "New York", "NY", "10001", "USA")
@@ -77,9 +88,23 @@ func TestListUserAddresses(t *testing.T) {
 			mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.userID).WillReturnRows(rows)
 
 			got, err := addressService.ListUserAddresses(tt.userID)
-			assert.Equal(t, tt.wantErr, err != nil, "ListUserAddresses() error = %v, wantErr %v", err, tt.wantErr)
+			assert.Equal(
+				t,
+				tt.wantErr,
+				err != nil,
+				"ListUserAddresses() error = %v, wantErr %v",
+				err,
+				tt.wantErr,
+			)
 			if !tt.wantErr {
-				assert.Len(t, got, tt.want, "ListUserAddresses() got = %v, want %v", len(got), tt.want)
+				assert.Len(
+					t,
+					got,
+					tt.want,
+					"ListUserAddresses() got = %v, want %v",
+					len(got),
+					tt.want,
+				)
 			}
 		})
 	}
@@ -88,7 +113,7 @@ func TestListUserAddresses(t *testing.T) {
 func TestGetAddressByID(t *testing.T) {
 	addressService, mock := setupAddressService(t)
 	seedAddresses(t, addressService)
-	query := "SELECT * FROM addresses WHERE address_id = $1"
+	query := `SELECT address_id, street_address, city, state, postal_code, country  FROM addresses WHERE address_id = $1`
 
 	tests := []struct {
 		name      string
@@ -120,7 +145,17 @@ func TestGetAddressByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rows := sqlmock.NewRows([]string{"address_id", "user_id", "street_address", "city", "state", "postal_code", "country"})
+			rows := sqlmock.NewRows(
+				[]string{
+					"address_id",
+					"user_id",
+					"street_address",
+					"city",
+					"state",
+					"postal_code",
+					"country",
+				},
+			)
 
 			if tt.want != nil {
 				rows.AddRow(tt.addressID, 1, "123 Main St", "New York", "NY", "10001", "USA")
@@ -128,7 +163,7 @@ func TestGetAddressByID(t *testing.T) {
 
 			mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.addressID).WillReturnRows(rows)
 
-			got, err := addressService.GetAddressByID(tt.addressID)
+			got, err := addressService.GetAddressByID(tt.addressID, tt.want.UserID)
 			if tt.wantErr {
 				assert.Error(t, err, "GetAddressByID() should have returned an error")
 				assert.Nil(t, got, "GetAddressByID() should have returned nil")
@@ -192,10 +227,18 @@ func TestCreateAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rows := sqlmock.NewRows([]string{"street_address", "city", "state", "postal_code", "country"})
+			rows := sqlmock.NewRows(
+				[]string{"street_address", "city", "state", "postal_code", "country"},
+			)
 
 			if tt.want != nil {
-				rows.AddRow(tt.address.StreetAddress, tt.address.City, tt.address.State, tt.address.PostalCode, tt.address.Country)
+				rows.AddRow(
+					tt.address.StreetAddress,
+					tt.address.City,
+					tt.address.State,
+					tt.address.PostalCode,
+					tt.address.Country,
+				)
 			}
 
 			mock.ExpectQuery(regexp.QuoteMeta(query)).
@@ -267,9 +310,18 @@ func TestUpdateAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rows := sqlmock.NewRows([]string{"address_id", "street_address", "city", "state", "postal_code", "country"})
+			rows := sqlmock.NewRows(
+				[]string{"address_id", "street_address", "city", "state", "postal_code", "country"},
+			)
 			if tt.want != nil {
-				rows.AddRow(tt.want.AddressID, tt.want.StreetAddress, tt.want.City, tt.want.State, tt.want.PostalCode, tt.want.Country)
+				rows.AddRow(
+					tt.want.AddressID,
+					tt.want.StreetAddress,
+					tt.want.City,
+					tt.want.State,
+					tt.want.PostalCode,
+					tt.want.Country,
+				)
 			}
 
 			mock.ExpectQuery(regexp.QuoteMeta(query)).
