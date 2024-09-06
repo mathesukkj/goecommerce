@@ -45,7 +45,7 @@ func seedAddresses(t *testing.T, service *AddressService) {
 func TestListUserAddresses(t *testing.T) {
 	addressService, mock := setupAddressService(t)
 	seedAddresses(t, addressService)
-	query := "SELECT * FROM addresses WHERE user_id = $1"
+	query := "SELECT address_id, user_id, street_address, city, state, postal_code, country FROM addresses WHERE user_id = $1"
 
 	tests := []struct {
 		name    string
@@ -113,17 +113,19 @@ func TestListUserAddresses(t *testing.T) {
 func TestGetAddressByID(t *testing.T) {
 	addressService, mock := setupAddressService(t)
 	seedAddresses(t, addressService)
-	query := `SELECT address_id, street_address, city, state, postal_code, country  FROM addresses WHERE address_id = $1`
+	query := `SELECT address_id, street_address, city, state, postal_code, country  FROM addresses WHERE address_id = $1 AND user_id = $2`
 
 	tests := []struct {
 		name      string
 		addressID int
+		userID    int
 		want      *entity.Address
 		wantErr   bool
 	}{
 		{
 			name:      "existing address",
 			addressID: 1,
+			userID:    1,
 			want: &entity.Address{
 				AddressID:     1,
 				UserID:        1,
@@ -138,6 +140,7 @@ func TestGetAddressByID(t *testing.T) {
 		{
 			name:      "non-existing address",
 			addressID: 999,
+			userID:    1,
 			want:      nil,
 			wantErr:   true,
 		},
@@ -161,9 +164,9 @@ func TestGetAddressByID(t *testing.T) {
 				rows.AddRow(tt.addressID, 1, "123 Main St", "New York", "NY", "10001", "USA")
 			}
 
-			mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.addressID).WillReturnRows(rows)
+			mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(tt.addressID, tt.userID).WillReturnRows(rows)
 
-			got, err := addressService.GetAddressByID(tt.addressID, tt.want.UserID)
+			got, err := addressService.GetAddressByID(tt.addressID, tt.userID)
 			if tt.wantErr {
 				assert.Error(t, err, "GetAddressByID() should have returned an error")
 				assert.Nil(t, got, "GetAddressByID() should have returned nil")
@@ -177,11 +180,10 @@ func TestGetAddressByID(t *testing.T) {
 
 func TestCreateAddress(t *testing.T) {
 	addressService, mock := setupAddressService(t)
-
 	query := `
 		INSERT INTO addresses (user_id, street_address, city, state, postal_code, country)
-		VALUES (:user_id, :street_address, :city, :state, :postal_code, :country)
-		RETURNING *
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING address_id, user_id, street_address, city, state, postal_code, country
 	`
 
 	tests := []struct {
@@ -261,9 +263,9 @@ func TestUpdateAddress(t *testing.T) {
 	addressService, mock := setupAddressService(t)
 	query := `
 		UPDATE addresses
-		SET street_address = :street_address, city = :city, state = :state, postal_code = :postal_code, country = :country
-		WHERE address_id = :address_id
-		RETURNING *
+		SET street_address = $1, city = $2, state = $3, postal_code = $4, country = $5
+		WHERE address_id = $6
+		RETURNING address_id, user_id, street_address, city, state, postal_code, country
 	`
 
 	tests := []struct {
